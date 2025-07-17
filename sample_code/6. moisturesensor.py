@@ -1,12 +1,14 @@
-import RPi.GPIO as GPIO #import RPi.GPIO module
-from time import sleep
+import RPi.GPIO as GPIO
 
-GPIO.setmode(GPIO.BCM) #choose BCM mode
-GPIO.setwarnings(False)
-GPIO.setup(4,GPIO.IN) #set GPIO 4 as input
-while (True):
-    if GPIO.input(4): #if read a high at GPIO 4, moisture present
-        print('detected HIGH i.e. moisture')
-    else: #otherwise (i.e. read a low) at GPIO 4, no moisture
-        print('detected LOW i.e. no moisture')
-    sleep(0.5) # to limit print() frequency
+def init():
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(4, GPIO.IN)  # set GPIO 4 as input
+
+
+def read_sensor():
+    ret = False
+
+    if GPIO.input(4):
+        ret = True
+
+    return ret

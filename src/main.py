@@ -1,8 +1,7 @@
 import RPi.GPIO as GPIO
-from sample_code import dht11
-from sample_code import I2C_LCD_driver
-from sample_code import keypad as keypad
-from sample_code import servo as servo
+from sample_code import I2C_LCD_driver as LCD, keypad as keypad, servo as servo, moisturesensor as moisture_sensor, dht11 
+import queue
+from threading import Thread
 from time import sleep
 import Adafruit_DHT
 
@@ -56,3 +55,23 @@ def servo_control():
         sleep(1)
         servo.move_to_position(90)
         sleep(1)
+
+def moisture_sensor_listener():
+    moisture_sensor.init()
+    while True:
+        moisture_level = moisture_sensor.read_moisture()
+        if moisture_level:
+            print('Moisture detected')
+        else:
+            print('No moisture detected')
+        sleep(0.5)  # Adjust the frequency of moisture checks as needed
+
+def led_blink():
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(18, GPIO.OUT)  # Set GPIO pin 18 as output for
+    while True:
+        GPIO.output(18, GPIO.HIGH)
+        sleep(1)  # LED on for 1 second
+        GPIO.output(18, GPIO.LOW)
+        sleep(1)
+        
