@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motion Detection</title>
+    <script>
+        function sendCommand(action) {
+            fetch("/control", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action: action })
+            }).then(() => {
+                document.getElementById("led-status").innerText = action.toUpperCase();
+            });
+        }
+
+        function toggleMotion() {
+            fetch("/toggle_motion", { method: "POST" })
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("motion-status").innerText = data.motion_active ? "ON" : "OFF";
+                });
+        }
+    </script>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .log-container {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-top: 10px;
+            background: #f8f8f8;
+        }
+        .video-container { text-align: center; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Motion Detection</h1>
+
+    <div class="video-container">
+        <h3>Live Camera Feed</h3>
+        <img src="{{ url_for('video_feed') }}" width="640" height="480">
+    </div>
+
+    <h3>Motion Log</h3>
+    <div class="log-container">
+        <ul>
+            {% for log in logs %}
+                <li>{{ log }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <h3>Controls</h3>
+    <button onclick="sendCommand('on')">Turn ON LED</button>
+    <button onclick="sendCommand('off')">Turn OFF LED</button>
+    <p>LED Status: <span id="led-status">OFF</span></p>
+
+    <h3>Motion Detection: <span id="motion-status">ON</span></h3>
+    <button onclick="toggleMotion()">Toggle Motion Detection</button>
+</body>
+</html>

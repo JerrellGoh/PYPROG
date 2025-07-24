@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Human Detection System</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color : #E6E6FA;
+            background: lavender;
+            
+        }
+        h1 {
+            color: #333;
+        }
+        h4 {
+            text-align: center;
+        }
+        
+        .warning {
+            color: red;
+            font-weight: bold;
+        }
+        .no-warning {
+            color: green;
+            font-weight: bold;
+        }
+        .video-feed {
+            margin-top: 20px;
+            border: 2px solid #333;
+            padding: 10px;
+        }
+        .log-container {
+            margin-top: 20px;
+            border: 2px solid #333;
+            padding: 10px;
+            height: 200px;
+            overflow-y: scroll;
+        }
+        
+        .cameraLog-container {
+            margin-top: 20px;
+            border: 2px solid #333;
+            padding: 10px;
+            height: 200px;
+            overflow-y: scroll;
+        }
+        .interval-form, .timeout-form, .toggle-form {
+            margin-top: 20px;
+        }
+        .toggle-button {
+            margin: 5px;
+        }
+        
+        .buttons-container {
+            text-align: center;  /* Center-align the buttons */
+            margin-bottom: 15px; /* Add space between buttons and graphs */
+        }
+
+        .graphs-container {
+            display: flex;
+            justify-content: center; /* Center the graphs */
+            gap: 20px; /* Add space between the graphs */
+        }
+        
+        
+        button {
+        background-color: white; /* Modern blue */
+        color: light gray; /* White text for contrast */
+        border: none;
+        padding: 10px 16px;
+        cursor: pointer;
+        font-size: 18px;
+        border-radius: 8px;
+        transition: background 0.3s ease-in-out;
+    }
+
+        button:hover {
+        background-color: #FFDDEE; /* Darker blue on hover */
+    }
+        
+    </style>
+</head>
+<body>
+    <h1>Human Detection System</h1>
+    <h2 class="{% if 'Warning' in warning %}warning{% else %}no-warning{% endif %}">{{ warning }}</h2>
+    <div class="video-feed">
+        <h3>Live Video Feed:</h3>
+        <img src="{{ url_for('video_feed') }}" alt="Live Video Feed">
+    </div>
+    <div class="log-container">
+        <h3>Motion Logs:</h3>
+        <ul id="motion-log-list">
+            {% for log in motion_logs %}
+                <li>{{ log }}</li>
+            {% endfor %}
+        </ul>
+        
+    </div>
+    <div class="cameraLog-container">
+        <h3>Camera Logs:</h3>
+        <ul id="camera-log-list">
+            {% for log in camera_logs %}
+                <li>{{ log }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    <div class="timeout-form">
+        <h3>Set Motion Timeout (seconds):</h3>
+        <form id="timeout-form">
+            <input type="number" name="timeout" min="1" value="{{ motion_timeout }}">
+            <button type="submit">Update</button>
+        </form>
+    </div>
+    <div class="toggle-form">
+        <h3>Toggle Detection:</h3>
+        <button id="toggle-ir-sensor" class="toggle-button">Toggle IR Sensor (Currently {{ "ON" if ir_sensor_enabled else "OFF" }})</button>
+        <button id="toggle-camera" class="toggle-button">Toggle Camera (Currently {{ "ON" if camera_enabled else "OFF" }})</button>
+        
+    </div>
+    
+    <h4>Curtain Controls</h4>
+    <!--original comment
+    <button onclick="controlCurtain('open')">Open Curtain</button>
+    <button onclick="controlCurtain('close')">Close Curtain</button>
+    <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/2818673/charts/2?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&type=line&update=15"></iframe>
+    <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/2818673/charts/3?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&type=line&update=15"></iframe>
+    -->
+    
+    <!-- Buttons Container -->
+<div class="buttons-container">
+    <button onclick="controlCurtain('open')">Open Curtain</button>
+    <button onclick="controlCurtain('close')">Close Curtain</button>
+</div>
+
+<!-- Graphs Container -->
+<div class="graphs-container">
+    <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/2818673/charts/2?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&type=line&update=15"></iframe>
+    <iframe width="450" height="260" style="border: 1px solid #cccccc;" src="https://thingspeak.com/channels/2818673/charts/3?bgcolor=%23ffffff&color=%23d62020&dynamic=true&results=60&type=line&update=15"></iframe>
+</div>
+    
+    
+    <script>
+        
+        function controlCurtain(action) {
+        fetch("/curtain_control", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: action })
+            });
+        }
+
+        // Function to fetch and update logs
+        function updateLogs() {
+            fetch("/get_logs")
+                .then(response => response.json())
+                .then(data => {
+                    const motionLogList = document.getElementById("motion-log-list");
+                    motionLogList.innerHTML = data.motion_logs.map(log => `<li>${log}</li>`).join("");
+                    const cameraLogList = document.getElementById("camera-log-list");
+                    cameraLogList.innerHTML = data.camera_logs.map(log => `<li>${log}</li>`).join("");
+                });
+        }
+
+        // Set up auto-update
+        let updateInterval = {{ update_interval }} * 1000; // Convert to milliseconds
+        setInterval(updateLogs, updateInterval);
+
+        
+
+        // Handle timeout form submission
+        document.getElementById("timeout-form").addEventListener("submit", function (e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            fetch("/set_timeout", {
+                method: "POST",
+                body: formData
+            });
+        });
+
+        // Handle IR sensor toggle
+        document.getElementById("toggle-ir-sensor").addEventListener("click", function (e) {
+            e.preventDefault();
+            fetch("/toggle_ir_sensor", { method: "POST" })
+                .then(response => response.json())
+                .then(data => {
+                    this.textContent = `Toggle IR Sensor (Currently ${data.status ? "ON" : "OFF"})`;
+                });
+        });
+
+        // Handle camera toggle
+        document.getElementById("toggle-camera").addEventListener("click", function (e) {
+            e.preventDefault();
+            fetch("/toggle_camera", { method: "POST" })
+                .then(response => response.json())
+                .then(data => {
+                    this.textContent = `Toggle Camera (Currently ${data.status ? "ON" : "OFF"})`;
+                });
+        });
+
+        // Handle human detection toggle
+        document.getElementById("toggle-human-detection").addEventListener("click", function (e) {
+            e.preventDefault();
+            fetch("/toggle_human_detection", { method: "POST" })
+                .then(response => response.json())
+                .then(data => {
+                    this.textContent = `Toggle Human Detection (Currently ${data.status ? "ON" : "OFF"})`;
+                });
+        });
+
+        
+
+        document.getElementById("led-off").addEventListener("click", function (e) {
+            e.preventDefault();
+            fetch("/control", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: "action=off"
+            });
+        });
+    </script>
+</body>
+</html>
